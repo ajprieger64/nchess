@@ -1,101 +1,203 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
+import Vector2D from "./vector";
 
-function unitToCanvasCoords(
-  coords: [number, number],
+function unitToCanvasCoords(coords: Vector2D, size: number): Vector2D {
+  return new Vector2D(
+    ((coords.x + 1) / 2.0) * size,
+    size - ((coords.y + 1) / 2.0) * size
+  );
+}
+
+function getCanvasBackground(size: number): Path2D {
+  const background = new Path2D();
+  background.moveTo(0, 0);
+  background.lineTo(0, size);
+  background.lineTo(size, size);
+  background.lineTo(size, 0);
+  background.closePath();
+  return background;
+}
+
+function getBoardCoords(size: number, numSides: number): Vector2D[] {
+  const boardCoords: Vector2D[] = [];
+  for (let i = 0; i < numSides; i++) {
+    const unitCoords = new Vector2D(
+      Math.cos(
+        (2 * Math.PI * i) / numSides - Math.PI / 2.0 - Math.PI / numSides
+      ),
+      Math.sin(
+        (2 * Math.PI * i) / numSides - Math.PI / 2.0 - Math.PI / numSides
+      )
+    );
+    const canvasCoords = unitToCanvasCoords(unitCoords, size);
+    boardCoords.push(canvasCoords);
+  }
+  return boardCoords;
+}
+
+function getBoardBackground(ngonCoords: Vector2D[]): Path2D {
+  const boardBackground = new Path2D();
+  boardBackground.moveTo(ngonCoords[0].x, ngonCoords[0].y);
+  for (const ngonCoord of ngonCoords) {
+    boardBackground.lineTo(ngonCoord.x, ngonCoord.y);
+  }
+  boardBackground.closePath();
+  return boardBackground;
+}
+
+// Transforms from a point on the unit square to the matching point within the quadrilateral with coordinates (topLeft, topRight, bottomRight, bottomLeft)
+function bilinearInterpolation2D(
+  start: Vector2D,
+  destination: [Vector2D, Vector2D, Vector2D, Vector2D]
+): Vector2D {
+  // First, interpolate along the x-axis (in the pre-transformation space), resulting in a single line (given by 2 points) that runs parallel to the y-axis (pre-transformation)
+  const [topLeft, topRight, bottomRight, bottomLeft] = destination;
+  const topVector = topRight.subtract(topLeft);
+  const bottomVector = bottomRight.subtract(bottomLeft);
+  const topPoint = topLeft.add(topVector.multiply(start.x));
+  const bottomPoint = bottomLeft.add(bottomVector.multiply(start.x));
+  // Next, linearly interpolate along the line produced to get our final point
+  const lineVector = topPoint.subtract(bottomPoint);
+  const transformedPoint = bottomPoint.add(lineVector.multiply(start.y));
+  return transformedPoint;
+}
+
+function getHalfboardsCoords(
+  boardCoords: Vector2D[],
   size: number
-): [number, number] {
-  return [
-    ((coords[0] + 1) / 2.0) * size,
-    size - ((coords[1] + 1) / 2.0) * size,
-  ];
+): [
+  [Vector2D, Vector2D, Vector2D, Vector2D],
+  [Vector2D, Vector2D, Vector2D, Vector2D],
+][] {
+  const n = boardCoords.length;
+  const halfboardsCoords: [
+    [Vector2D, Vector2D, Vector2D, Vector2D],
+    [Vector2D, Vector2D, Vector2D, Vector2D],
+  ][] = [];
+  for (let i = 0; i < n; i += 2) {
+    const leftIndex = (((i - 1) % n) + n) % n;
+    const rightIndex = (i + 1) % n;
+    const rightRightIndex = (i + 2) % n;
+    const leftQuarterBoardTopRight = unitToCanvasCoords(
+      new Vector2D(0, 0),
+      size
+    );
+    const leftQuarterBoardBottomRight = boardCoords[i]
+      .add(boardCoords[rightIndex])
+      .divide(2);
+    const leftQuarterBoardBottomLeft = boardCoords[i];
+    const leftQuarterBoardTopLeft = boardCoords[i]
+      .add(boardCoords[leftIndex])
+      .divide(2);
+    // Left side of right quarter-board is right side of left quarter-board
+    const rightQuarterBoardTopRight = boardCoords[rightIndex]
+      .add(boardCoords[rightRightIndex])
+      .divide(2);
+    const rightQuarterBoardBottomRight = boardCoords[rightIndex];
+    halfboardsCoords.push([
+      [
+        leftQuarterBoardTopLeft,
+        leftQuarterBoardTopRight,
+        leftQuarterBoardBottomRight,
+        leftQuarterBoardBottomLeft,
+      ],
+      [
+        leftQuarterBoardTopRight,
+        rightQuarterBoardTopRight,
+        rightQuarterBoardBottomRight,
+        leftQuarterBoardBottomRight,
+      ],
+    ] as const);
+  }
+  return halfboardsCoords;
+}
+
+function getDarkSquares(
+  halfboardsCoords: [
+    [Vector2D, Vector2D, Vector2D, Vector2D],
+    [Vector2D, Vector2D, Vector2D, Vector2D],
+  ][]
+): Path2D {
+  const boardSquares = new Path2D();
+  // Each quarter-board is a quarter of a regular chessboard, containing 4×4 tiles. The tile in the bottom-left is black
+  const NUM_LINEAR_TILES_PER_BOARD = 4;
+  for (const halfboardCoords of halfboardsCoords) {
+    for (const quarterBoardCoords of halfboardCoords) {
+      for (let i = 0; i < NUM_LINEAR_TILES_PER_BOARD; i++) {
+        for (let j = 0; j < NUM_LINEAR_TILES_PER_BOARD; j++) {
+          if ((i + j) % 2 != 0) {
+            continue;
+          }
+          const topLeftUnitSquareCoords = new Vector2D(
+            i / NUM_LINEAR_TILES_PER_BOARD,
+            (j + 1) / NUM_LINEAR_TILES_PER_BOARD
+          );
+          const topRightUnitSquareCoords = new Vector2D(
+            (i + 1) / NUM_LINEAR_TILES_PER_BOARD,
+            (j + 1) / NUM_LINEAR_TILES_PER_BOARD
+          );
+          const bottomRightUnitSquareCoords = new Vector2D(
+            (i + 1) / NUM_LINEAR_TILES_PER_BOARD,
+            j / NUM_LINEAR_TILES_PER_BOARD
+          );
+          const bottomLeftUnitSquareCoords = new Vector2D(
+            i / NUM_LINEAR_TILES_PER_BOARD,
+            j / NUM_LINEAR_TILES_PER_BOARD
+          );
+          const transformedCoords = [
+            bilinearInterpolation2D(
+              topLeftUnitSquareCoords,
+              quarterBoardCoords
+            ),
+            bilinearInterpolation2D(
+              topRightUnitSquareCoords,
+              quarterBoardCoords
+            ),
+            bilinearInterpolation2D(
+              bottomRightUnitSquareCoords,
+              quarterBoardCoords
+            ),
+            bilinearInterpolation2D(
+              bottomLeftUnitSquareCoords,
+              quarterBoardCoords
+            ),
+          ] as const;
+          boardSquares.moveTo(transformedCoords[0].x, transformedCoords[0].y);
+          for (const transformedCoord of transformedCoords) {
+            boardSquares.lineTo(transformedCoord.x, transformedCoord.y);
+          }
+          boardSquares.closePath();
+        }
+      }
+    }
+  }
+  return boardSquares;
 }
 
 export default function BoardCanvas() {
   const SIZE = 1000;
-  const NUM_PLAYERS = 3;
+  const NUM_PLAYERS = 4;
   const ref = useRef<HTMLCanvasElement>(null);
   const effect = useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = ref.current.getContext("2d");
     if (!ctx) return;
-    const canvasSize = canvas.width;
-    console.log("Canvas size: ", canvasSize);
-    const rectangle = new Path2D();
-    rectangle.moveTo(0 * canvasSize, 0 * canvasSize);
-    rectangle.lineTo(0 * canvasSize, 1 * canvasSize);
-    rectangle.lineTo(1 * canvasSize, 1 * canvasSize);
-    rectangle.lineTo(1 * canvasSize, 0 * canvasSize);
-    rectangle.lineTo(0 * canvasSize, 0 * canvasSize);
+    const canvasBackground = getCanvasBackground(SIZE);
+    ctx.fillStyle = "rgb(255, 0, 0)";
+    ctx.fill(canvasBackground);
 
-    ctx.strokeStyle = "rgb(255, 0, 0)";
-    ctx.stroke(rectangle);
+    const boardCoords = getBoardCoords(SIZE, NUM_PLAYERS * 2);
+    const boardBackground = getBoardBackground(boardCoords);
+    ctx.fillStyle = "rgb(0, 255, 0)";
+    ctx.fill(boardBackground);
 
-    const n = NUM_PLAYERS * 2;
-    const ngonCoords: [number, number][] = [];
-    for (let i = 0; i < n; i++) {
-      const coord: [number, number] = [
-        Math.cos(
-          (2 * Math.PI * i) / n - Math.PI / 2.0 + Math.PI / (2.0 * NUM_PLAYERS)
-        ),
-        Math.sin(
-          (2 * Math.PI * i) / n - Math.PI / 2.0 + Math.PI / (2.0 * NUM_PLAYERS)
-        ),
-      ];
-      ngonCoords.push(coord);
-    }
-    const skewedSquaresCoords: [
-      [number, number],
-      [number, number],
-      [number, number],
-      [number, number],
-    ][] = [];
-    for (let i = 0; i < n; i++) {
-      const leftIndex = (((i - 1) % n) + n) % n;
-      const rightIndex = (i + 1) % n;
-      const topLeft: [number, number] = [0, 0];
-      const topRight: [number, number] = [
-        (ngonCoords[i][0] + ngonCoords[rightIndex][0]) / 2.0,
-        (ngonCoords[i][1] + ngonCoords[rightIndex][1]) / 2.0,
-      ];
-      const bottomRight = ngonCoords[i];
-      const bottomLeft: [number, number] = [
-        (ngonCoords[i][0] + ngonCoords[leftIndex][0]) / 2.0,
-        (ngonCoords[i][1] + ngonCoords[leftIndex][1]) / 2.0,
-      ];
-      skewedSquaresCoords.push([topLeft, topRight, bottomRight, bottomLeft]);
-    }
-
-    console.log(skewedSquaresCoords);
-
-    const ngon = new Path2D();
-    ngon.moveTo(...unitToCanvasCoords(ngonCoords[0], SIZE));
-    for (const ngonCoord of ngonCoords) {
-      ngon.lineTo(...unitToCanvasCoords(ngonCoord, SIZE));
-    }
-    ngon.lineTo(...unitToCanvasCoords(ngonCoords[0], SIZE));
-
-    ctx.strokeStyle = "rgb(0, 255, 0)";
-    ctx.stroke(ngon);
-
-    const skewedSquares: Path2D[] = [];
-    for (const skewedSquareCoords of skewedSquaresCoords) {
-      const skewedSquare = new Path2D();
-      skewedSquare.moveTo(...unitToCanvasCoords(skewedSquareCoords[0], SIZE));
-      for (const skewedSquareCoord of skewedSquareCoords) {
-        skewedSquare.lineTo(...unitToCanvasCoords(skewedSquareCoord, SIZE));
-      }
-      skewedSquare.lineTo(...unitToCanvasCoords(skewedSquareCoords[0], SIZE));
-      skewedSquares.push(skewedSquare);
-    }
-
-    for (let i = 0; i < n; i++) {
-      const skewedSquare = skewedSquares[i];
-      ctx.strokeStyle = `rgb(0, 0, ${((i + 1) / n) * 255})`;
-      ctx.stroke(skewedSquare);
-    }
+    const halfboardsCoords = getHalfboardsCoords(boardCoords, SIZE);
+    const darkSquares = getDarkSquares(halfboardsCoords);
+    ctx.fillStyle = "rgb(0, 0, 255)";
+    ctx.fill(darkSquares);
 
     return () => {
       const canvas = ref.current;
