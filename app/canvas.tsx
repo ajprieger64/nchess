@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Vector2D from "./vector";
 
 function unitToCanvasCoords(coords: Vector2D, size: number): Vector2D {
@@ -20,17 +20,53 @@ function getCanvasBackground(size: number): Path2D {
   return background;
 }
 
-function getBoardCoords(size: number, numSides: number): Vector2D[] {
+function getBoardCoords(
+  size: number,
+  numSides: number,
+  rtheta: readonly [number, number] | null
+): Vector2D[] {
+  const boardWeights: number[] = [];
+  const WEIGHT_STRENGTH = 3;
+  for (let i = 0; i < numSides; i++) {
+    if (rtheta) {
+      const [r, theta] = rtheta;
+      const canonicalAngle = ((2 * Math.PI) / numSides) * i - Math.PI / 2;
+      const angularDistance =
+        ((((canonicalAngle - theta + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) %
+          (2 * Math.PI)) -
+        Math.PI;
+      if (r == 0) {
+        boardWeights.push(1);
+      } else {
+        const weight = gaussianDistribution(
+          1 / (r * WEIGHT_STRENGTH),
+          angularDistance
+        );
+        boardWeights.push(weight);
+      }
+    } else {
+      boardWeights.push(1);
+    }
+  }
+  const normalizedWeights: number[] = [];
+  for (const weight of boardWeights) {
+    normalizedWeights.push(
+      weight / boardWeights.reduce((partialSum, a) => partialSum + a, 0)
+    );
+  }
+  console.log(normalizedWeights);
+  const startAngle = -Math.PI / 2 - Math.PI * normalizedWeights[0];
+  const angleStep = (2 * Math.PI) / numSides;
   const boardCoords: Vector2D[] = [];
   for (let i = 0; i < numSides; i++) {
-    const unitCoords = new Vector2D(
-      Math.cos(
-        (2 * Math.PI * i) / numSides - Math.PI / 2.0 - Math.PI / numSides
-      ),
-      Math.sin(
-        (2 * Math.PI * i) / numSides - Math.PI / 2.0 - Math.PI / numSides
-      )
-    );
+    const angle =
+      startAngle +
+      normalizedWeights
+        .slice(0, i)
+        .reduce((partialSum, a) => partialSum + a, 0) *
+        2 *
+        Math.PI;
+    const unitCoords = new Vector2D(Math.cos(angle), Math.sin(angle));
     const canvasCoords = unitToCanvasCoords(unitCoords, size);
     boardCoords.push(canvasCoords);
   }
@@ -62,6 +98,13 @@ function bilinearInterpolation2D(
   const lineVector = topPoint.subtract(bottomPoint);
   const transformedPoint = bottomPoint.add(lineVector.multiply(start.y));
   return transformedPoint;
+}
+
+function gaussianDistribution(sigma: number, x: number) {
+  // Mean is 0
+  return (
+    Math.exp(-(x ** 2) / (2 * sigma ** 2)) / Math.sqrt(2 * Math.PI * sigma ** 2)
+  );
 }
 
 function getHalfboardsCoords(
@@ -178,8 +221,9 @@ function getDarkSquares(
 
 export default function BoardCanvas() {
   const SIZE = 1000;
-  const NUM_PLAYERS = 4;
+  const NUM_PLAYERS = 3;
   const ref = useRef<HTMLCanvasElement>(null);
+  const [rTheta, setRTheta] = useState<null | readonly [number, number]>(null);
   const effect = useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -189,7 +233,7 @@ export default function BoardCanvas() {
     ctx.fillStyle = "rgb(255, 0, 0)";
     ctx.fill(canvasBackground);
 
-    const boardCoords = getBoardCoords(SIZE, NUM_PLAYERS * 2);
+    const boardCoords = getBoardCoords(SIZE, NUM_PLAYERS * 2, rTheta);
     const boardBackground = getBoardBackground(boardCoords);
     ctx.fillStyle = "rgb(0, 255, 0)";
     ctx.fill(boardBackground);
@@ -205,7 +249,56 @@ export default function BoardCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     };
-  });
+  }, [rTheta]);
+
+  function getMouseAngularCoordsFromCenter(
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const {
+      left: canvasLeft,
+      top: canvasTop,
+      width: canvasWidth,
+      height: canvasHeight,
+    } = canvas.getBoundingClientRect();
+    const [centerX, centerY] = [
+      canvasLeft + canvasWidth / 2,
+      canvasTop + canvasHeight / 2,
+    ];
+    const [deltaX, deltaY] = [e.clientX - centerX, e.clientY - centerY];
+    const rtheta = [
+      Math.sqrt(deltaX ** 2 + deltaY ** 2) / canvasWidth,
+      ((Math.atan2(-deltaY, deltaX) % (2 * Math.PI)) + 2 * Math.PI) %
+        (2 * Math.PI),
+    ] as const;
+    return rtheta;
+  }
+
+  function mouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    const newRTheta = getMouseAngularCoordsFromCenter(e);
+    if (!newRTheta) return;
+    setRTheta(newRTheta);
+  }
+
+  function mouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (e.buttons == 0) {
+      // User is not holding down the mouse button
+      // They may have moved the mouse off from the element and released
+      setRTheta(null);
+      return;
+    }
+    if (rTheta) {
+      const newRTheta = getMouseAngularCoordsFromCenter(e);
+      if (!newRTheta) return;
+      setRTheta(newRTheta);
+    }
+  }
+
+  function mouseUp(_: React.MouseEvent<HTMLCanvasElement>) {
+    setRTheta(null);
+  }
+
   return (
     <div className="grid">
       <canvas
@@ -213,6 +306,9 @@ export default function BoardCanvas() {
         width={`${SIZE}px`}
         height={`${SIZE}px`}
         ref={ref}
+        onMouseDown={mouseDown}
+        onMouseMove={mouseMove}
+        onMouseUp={mouseUp}
       />
     </div>
   );
