@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import Vector2D from "./vector";
+import { erf } from "mathjs";
 
 function unitToCanvasCoords(coords: Vector2D, size: number): Vector2D {
   return new Vector2D(
@@ -25,47 +26,31 @@ function getBoardCoords(
   numSides: number,
   rtheta: readonly [number, number] | null
 ): Vector2D[] {
-  const boardWeights: number[] = [];
-  const WEIGHT_STRENGTH = 3;
-  for (let i = 0; i < numSides; i++) {
-    if (rtheta) {
-      const [r, theta] = rtheta;
-      const canonicalAngle = ((2 * Math.PI) / numSides) * i - Math.PI / 2;
-      const angularDistance =
-        ((((canonicalAngle - theta + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) %
-          (2 * Math.PI)) -
-        Math.PI;
-      if (r == 0) {
-        boardWeights.push(1);
-      } else {
-        const weight = gaussianDistribution(
-          1 / (r * WEIGHT_STRENGTH),
-          angularDistance
-        );
-        boardWeights.push(weight);
-      }
-    } else {
-      boardWeights.push(1);
-    }
-  }
-  const normalizedWeights: number[] = [];
-  for (const weight of boardWeights) {
-    normalizedWeights.push(
-      weight / boardWeights.reduce((partialSum, a) => partialSum + a, 0)
-    );
-  }
-  console.log(normalizedWeights);
-  const startAngle = -Math.PI / 2 - Math.PI * normalizedWeights[0];
-  const angleStep = (2 * Math.PI) / numSides;
   const boardCoords: Vector2D[] = [];
+  const SQUISH_STRENGTH = 3;
   for (let i = 0; i < numSides; i++) {
-    const angle =
-      startAngle +
-      normalizedWeights
-        .slice(0, i)
-        .reduce((partialSum, a) => partialSum + a, 0) *
-        2 *
-        Math.PI;
+    const canonicalAngle = ((2 * Math.PI) / numSides) * (i - 0.5) - Math.PI / 2;
+    const angle = rtheta
+      ? (() => {
+          const [r, theta] = rtheta;
+          if (r == 0) {
+            return canonicalAngle;
+          }
+          const angularDistance =
+            ((((canonicalAngle - theta + Math.PI) % (2 * Math.PI)) +
+              2 * Math.PI) %
+              (2 * Math.PI)) -
+            Math.PI;
+          const areaUnderCurve =
+            erf((Math.PI * r * SQUISH_STRENGTH) / Math.sqrt(2)) / 2;
+          const positionAroundCircle =
+            erf((angularDistance * r * SQUISH_STRENGTH) / Math.sqrt(2)) /
+            2 /
+            areaUnderCurve;
+          console.log(r);
+          return theta + Math.PI * positionAroundCircle;
+        })()
+      : canonicalAngle;
     const unitCoords = new Vector2D(Math.cos(angle), Math.sin(angle));
     const canvasCoords = unitToCanvasCoords(unitCoords, size);
     boardCoords.push(canvasCoords);
@@ -98,13 +83,6 @@ function bilinearInterpolation2D(
   const lineVector = topPoint.subtract(bottomPoint);
   const transformedPoint = bottomPoint.add(lineVector.multiply(start.y));
   return transformedPoint;
-}
-
-function gaussianDistribution(sigma: number, x: number) {
-  // Mean is 0
-  return (
-    Math.exp(-(x ** 2) / (2 * sigma ** 2)) / Math.sqrt(2 * Math.PI * sigma ** 2)
-  );
 }
 
 function getHalfboardsCoords(
@@ -251,9 +229,7 @@ export default function BoardCanvas() {
     };
   }, [rTheta]);
 
-  function getMouseAngularCoordsFromCenter(
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) {
+  function getAngularCoordsFromCenter(x: number, y: number) {
     const canvas = ref.current;
     if (!canvas) return;
     const {
@@ -266,7 +242,7 @@ export default function BoardCanvas() {
       canvasLeft + canvasWidth / 2,
       canvasTop + canvasHeight / 2,
     ];
-    const [deltaX, deltaY] = [e.clientX - centerX, e.clientY - centerY];
+    const [deltaX, deltaY] = [x - centerX, y - centerY];
     const rtheta = [
       Math.sqrt(deltaX ** 2 + deltaY ** 2) / canvasWidth,
       ((Math.atan2(-deltaY, deltaX) % (2 * Math.PI)) + 2 * Math.PI) %
@@ -275,27 +251,58 @@ export default function BoardCanvas() {
     return rtheta;
   }
 
-  function mouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
-    const newRTheta = getMouseAngularCoordsFromCenter(e);
+  function getRTheta(
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) {
+    let rTheta = null;
+    if (e.nativeEvent instanceof MouseEvent) {
+      rTheta = getAngularCoordsFromCenter(
+        e.nativeEvent.clientX,
+        e.nativeEvent.clientY
+      );
+    } else if (e.nativeEvent instanceof TouchEvent) {
+      if (e.nativeEvent.touches.length == 1) {
+        rTheta = getAngularCoordsFromCenter(
+          e.nativeEvent.touches[0].clientX,
+          e.nativeEvent.touches[0].clientY
+        );
+      }
+    }
+    console.log(rTheta);
+    return rTheta;
+  }
+
+  function mouseDown(
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) {
+    const newRTheta = getRTheta(e);
     if (!newRTheta) return;
     setRTheta(newRTheta);
   }
 
-  function mouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
-    if (e.buttons == 0) {
+  function mouseMove(
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) {
+    if (e instanceof MouseEvent && e.buttons == 0) {
       // User is not holding down the mouse button
       // They may have moved the mouse off from the element and released
       setRTheta(null);
       return;
+    } else if (e instanceof TouchEvent && e.touches.length != 1) {
+      // User has either added or subtracted a finger
+      setRTheta(null);
+      return;
     }
     if (rTheta) {
-      const newRTheta = getMouseAngularCoordsFromCenter(e);
+      const newRTheta = getRTheta(e);
       if (!newRTheta) return;
       setRTheta(newRTheta);
     }
   }
 
-  function mouseUp(_: React.MouseEvent<HTMLCanvasElement>) {
+  function mouseUp(
+    _: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) {
     setRTheta(null);
   }
 
@@ -307,8 +314,11 @@ export default function BoardCanvas() {
         height={`${SIZE}px`}
         ref={ref}
         onMouseDown={mouseDown}
+        onTouchStart={mouseDown}
         onMouseMove={mouseMove}
+        onTouchMove={mouseMove}
         onMouseUp={mouseUp}
+        onTouchEnd={mouseUp}
       />
     </div>
   );
