@@ -21,13 +21,21 @@ function getCanvasBackground(size: number): Path2D {
   return background;
 }
 
+function zoomTransformation(strength: number, x: number) {
+  return Math.sign(x) * Math.abs(x) ** (1 / (strength + 1));
+}
+
+function getMaxZoomStrength(x: number, maxAllowableY: number) {
+  return Math.log(x) / Math.log(maxAllowableY) - 1;
+}
+
 function getBoardCoords(
   size: number,
   numSides: number,
   rtheta: readonly [number, number] | null
 ): Vector2D[] {
   const boardCoords: Vector2D[] = [];
-  const SQUISH_STRENGTH = 3;
+  const maxZoomStrength = getMaxZoomStrength(1 / numSides, 1 / 4);
   for (let i = 0; i < numSides; i++) {
     const canonicalAngle = ((2 * Math.PI) / numSides) * (i - 0.5) - Math.PI / 2;
     const angle = rtheta
@@ -36,19 +44,17 @@ function getBoardCoords(
           if (r == 0) {
             return canonicalAngle;
           }
+          const zoomStrength = Math.min(r * maxZoomStrength, maxZoomStrength);
+          console.log(zoomStrength);
           const angularDistance =
             ((((canonicalAngle - theta + Math.PI) % (2 * Math.PI)) +
               2 * Math.PI) %
               (2 * Math.PI)) -
             Math.PI;
-          const areaUnderCurve =
-            erf((Math.PI * r * SQUISH_STRENGTH) / Math.sqrt(2)) / 2;
-          const positionAroundCircle =
-            erf((angularDistance * r * SQUISH_STRENGTH) / Math.sqrt(2)) /
-            2 /
-            areaUnderCurve;
-          console.log(r);
-          return theta + Math.PI * positionAroundCircle;
+          const transformedAngularDistance =
+            zoomTransformation(zoomStrength, angularDistance / Math.PI) *
+            Math.PI;
+          return theta + transformedAngularDistance;
         })()
       : canonicalAngle;
     const unitCoords = new Vector2D(Math.cos(angle), Math.sin(angle));
@@ -244,7 +250,7 @@ export default function BoardCanvas() {
     ];
     const [deltaX, deltaY] = [x - centerX, y - centerY];
     const rtheta = [
-      Math.sqrt(deltaX ** 2 + deltaY ** 2) / canvasWidth,
+      (2 * Math.sqrt(deltaX ** 2 + deltaY ** 2)) / canvasWidth,
       ((Math.atan2(-deltaY, deltaX) % (2 * Math.PI)) + 2 * Math.PI) %
         (2 * Math.PI),
     ] as const;
@@ -268,7 +274,6 @@ export default function BoardCanvas() {
         );
       }
     }
-    console.log(rTheta);
     return rTheta;
   }
 
