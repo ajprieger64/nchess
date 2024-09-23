@@ -2,7 +2,9 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import Vector2D from "./vector";
-import { erf } from "mathjs";
+import NChessboard from "./nchessboard";
+import { CHESS_PIECE_LIST, ChessPieceType } from "./pieces";
+import drawPiece from "./pieces/draw_piece";
 
 function unitToCanvasCoords(coords: Vector2D, size: number): Vector2D {
   return new Vector2D(
@@ -35,7 +37,7 @@ function getBoardCoords(
   rtheta: readonly [number, number] | null
 ): Vector2D[] {
   const boardCoords: Vector2D[] = [];
-  const maxZoomStrength = getMaxZoomStrength(1 / numSides, 1 / 4);
+  const maxZoomStrength = getMaxZoomStrength(1 / numSides, 1 / 3);
   for (let i = 0; i < numSides; i++) {
     const canonicalAngle = ((2 * Math.PI) / numSides) * (i - 0.5) - Math.PI / 2;
     const angle = rtheta
@@ -206,14 +208,17 @@ function getDarkSquares(
 export default function BoardCanvas() {
   const SIZE = 1000;
   const NUM_PLAYERS = 3;
-  const ref = useRef<HTMLCanvasElement>(null);
+  const board = new NChessboard(NUM_PLAYERS);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const [rTheta, setRTheta] = useState<null | readonly [number, number]>(null);
   const effect = useEffect(() => {
-    const canvas = ref.current;
+    const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = ref.current.getContext("2d");
+    const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
     const canvasBackground = getCanvasBackground(SIZE);
+
     ctx.fillStyle = "rgb(255, 0, 0)";
     ctx.fill(canvasBackground);
 
@@ -227,16 +232,27 @@ export default function BoardCanvas() {
     ctx.fillStyle = "rgb(0, 0, 255)";
     ctx.fill(darkSquares);
 
+    ctx.fillStyle = "rgb(0, 255, 255)";
+
+    drawPiece({ pieceType: "K", player: 0 }, ctx, 0, 0, 100);
+    drawPiece({ pieceType: "Q", player: 0 }, ctx, 100, 0, 100);
+    drawPiece({ pieceType: "R", player: 0 }, ctx, 200, 0, 100);
+    drawPiece({ pieceType: "B", player: 0 }, ctx, 0, 100, 100);
+    drawPiece({ pieceType: "N", player: 0 }, ctx, 100, 100, 100);
+    drawPiece({ pieceType: "p", player: 0 }, ctx, 200, 100, 100);
+
     return () => {
-      const canvas = ref.current;
-      if (canvas) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvasRef.current.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.resetTransform();
     };
-  }, [rTheta]);
+  }, [rTheta, canvasRef]);
 
   function getAngularCoordsFromCenter(x: number, y: number) {
-    const canvas = ref.current;
+    const canvas = canvasRef.current;
     if (!canvas) return;
     const {
       left: canvasLeft,
@@ -288,12 +304,15 @@ export default function BoardCanvas() {
   function mouseMove(
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) {
-    if (e instanceof MouseEvent && e.buttons == 0) {
+    if (e.nativeEvent instanceof MouseEvent && e.nativeEvent.buttons == 0) {
       // User is not holding down the mouse button
       // They may have moved the mouse off from the element and released
       setRTheta(null);
       return;
-    } else if (e instanceof TouchEvent && e.touches.length != 1) {
+    } else if (
+      e.nativeEvent instanceof TouchEvent &&
+      e.nativeEvent.touches.length != 1
+    ) {
       // User has either added or subtracted a finger
       setRTheta(null);
       return;
@@ -317,7 +336,7 @@ export default function BoardCanvas() {
         className="board justify-self-center"
         width={`${SIZE}px`}
         height={`${SIZE}px`}
-        ref={ref}
+        ref={canvasRef}
         onMouseDown={mouseDown}
         onTouchStart={mouseDown}
         onMouseMove={mouseMove}
