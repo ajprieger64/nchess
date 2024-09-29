@@ -16,9 +16,10 @@
   }
 }
 
-.board {
-  width: calc(min(100vh, 100%));
-  height: calc(min(100vh, 100%));
+.grid {
+  width: 100vw;
+  height: 100vh;
+  writing-mode: horizontal-tb;
 }
 
 body {

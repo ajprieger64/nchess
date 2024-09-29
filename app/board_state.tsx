@@ -1,6 +1,6 @@
-import NChessHalfboard from "./halfboard";
+import NChessHalfboard from "./halfboard_state";
 
-export default class NChessboard {
+export default class BoardState {
   n: number;
   halfboards: Array<NChessHalfboard>;
   constructor(n: number) {
