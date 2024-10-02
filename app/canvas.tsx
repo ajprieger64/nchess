@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import BoardState from "./board_state";
+import BoardState from "./board-state";
 import { CHESS_PIECE_LIST, ChessPieceType } from "./pieces";
-import drawPiece from "./pieces/draw_piece";
-import { CanvasContext } from "./canvas_context";
-import BoardRenderer from "./board_renderer";
+import drawPiece from "./pieces/draw-piece";
+import BoardRenderer from "./render-board";
+import renderBoard from "./render-board";
+import BoardCoords from "./board-coords";
+import renderPieces from "./render-pieces";
 
 export default function BoardCanvas() {
   const SIZE = 1000;
   const NUM_PLAYERS = 3;
-  const board = new BoardState(NUM_PLAYERS);
   const [widthHeight, setWidthHeight] = useState<[number, number] | null>(null);
   const divRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,6 +36,40 @@ export default function BoardCanvas() {
   }, [divRef]);
 
   const [rTheta, setRTheta] = useState<null | readonly [number, number]>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (!widthHeight) return;
+    const [canvasWidth, canvasHeight] = widthHeight;
+
+    if (canvasHeight > canvasWidth)
+      ctx.translate(0, (canvasHeight - canvasWidth) / 2);
+    else ctx.translate((canvasWidth - canvasHeight) / 2, 0);
+
+    ctx.scale(
+      Math.min(canvasWidth, canvasHeight),
+      Math.min(canvasWidth, canvasHeight)
+    );
+
+    const boardCoords = new BoardCoords(
+      NUM_PLAYERS,
+      rTheta?.[0] ?? 0,
+      rTheta?.[1] ?? 0
+    );
+    const boardState = new BoardState(NUM_PLAYERS);
+
+    renderBoard(ctx, boardCoords);
+    renderPieces(ctx, boardCoords, boardState);
+
+    return () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.resetTransform();
+    };
+  }, [canvasRef, widthHeight, rTheta]);
 
   function getAngularCoordsFromCenter(x: number, y: number) {
     const canvas = canvasRef.current;
@@ -68,7 +103,7 @@ export default function BoardCanvas() {
         e.nativeEvent.clientY
       );
     } else if (e.nativeEvent instanceof TouchEvent) {
-      if (e.nativeEvent.touches.length == 1) {
+      if (e.nativeEvent.touches.length === 1) {
         rTheta = getAngularCoordsFromCenter(
           e.nativeEvent.touches[0].clientX,
           e.nativeEvent.touches[0].clientY
@@ -89,7 +124,7 @@ export default function BoardCanvas() {
   function mouseMove(
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) {
-    if (e.nativeEvent instanceof MouseEvent && e.nativeEvent.buttons == 0) {
+    if (e.nativeEvent instanceof MouseEvent && e.nativeEvent.buttons === 0) {
       // User is not holding down the mouse button
       // They may have moved the mouse off from the element and released
       setRTheta(null);
@@ -129,13 +164,6 @@ export default function BoardCanvas() {
         onMouseUp={mouseUp}
         onTouchEnd={mouseUp}
       />
-      <CanvasContext.Provider value={canvasRef?.current}>
-        <BoardRenderer
-          numPlayers={NUM_PLAYERS}
-          zoomStrength={rTheta?.[0] ?? 0}
-          zoomAngle={rTheta?.[1] ?? 0}
-        />
-      </CanvasContext.Provider>
     </div>
   );
 }

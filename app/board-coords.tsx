@@ -1,4 +1,4 @@
-import HalfboardCoords from "./halfboard_coords";
+import HalfboardCoords from "./halfboard-coords";
 import Vector2D from "./vector";
 
 // TODO: Check whether the board would look better if this were dynamically based on the number of sides
@@ -16,7 +16,7 @@ export default class BoardCoords {
     );
     for (let i = 0; i < numSides; i++) {
       const canonicalAngle =
-        ((2 * Math.PI) / numSides) * (i - 0.5) - Math.PI / 2;
+        ((2 * Math.PI) / numSides) * (i - 0.5) + Math.PI / 2;
       const boundedZoomStrength = Math.min(
         zoomStrength * maxZoomStrength,
         maxZoomStrength

@@ -1,10 +1,12 @@
+import HalfboardState from "./halfboard-state";
 import Vector2D from "./vector";
-const BOARD_CENTER = new Vector2D(0.5, 0.5);
-const NUM_LINEAR_TILES_PER_BOARD = 4;
 
 type Quadrilateral = [Vector2D, Vector2D, Vector2D, Vector2D];
 
 export default class HalfboardCoords {
+  static BOARD_CENTER = new Vector2D(0.5, 0.5);
+  static NUM_FILES_PER_QUARTER_BOARD = 4;
+
   leftQuarterBoardTopLeft: Vector2D;
   leftQuarterBoardTopRight: Vector2D;
   leftQuarterBoardBottomRight: Vector2D;
@@ -16,21 +18,21 @@ export default class HalfboardCoords {
     In Euclidean space, it is representable by five points connected by straight lines:
     The four normal corners of the halfboard (top-left, top-right, bottom-right, and bottom-left) and the center of the board (which appears between top-left and top-right)
     The two top corners appear at points midway between vertices, while the two bottom corners are themselves at vertices.
-    The halfboard numbered '0' has bottom corners at indices 0 and 1 in the boardVertices array */
-    const bottomLeftVertexIndex = (2 * boardNumber) % boardVertices.length;
-    const bottomRightVertexIndex =
-      (bottomLeftVertexIndex + 1) % boardVertices.length;
+    The halfboard numbered '0' has bottom corners at indices 0 (right) and 1 (left) in the boardVertices array */
+    const bottomRightVertexIndex = (2 * boardNumber) % boardVertices.length;
+    const bottomLeftVertexIndex =
+      (bottomRightVertexIndex + 1) % boardVertices.length;
     // Added % term needed to take modulo properly because index could be negative
-    const leftOfBoardVertexIndex =
-      (((bottomLeftVertexIndex - 1) % boardVertices.length) +
+    const rightOfBoardVertexIndex =
+      (((bottomRightVertexIndex - 1) % boardVertices.length) +
         boardVertices.length) %
       boardVertices.length;
-    const rightOfBoardVertexIndex =
-      (bottomRightVertexIndex + 1) % boardVertices.length;
+    const leftOfBoardVertexIndex =
+      (bottomLeftVertexIndex + 1) % boardVertices.length;
     this.leftQuarterBoardTopLeft = boardVertices[bottomLeftVertexIndex]
       .add(boardVertices[leftOfBoardVertexIndex])
       .divide(2);
-    this.leftQuarterBoardTopRight = BOARD_CENTER;
+    this.leftQuarterBoardTopRight = HalfboardCoords.BOARD_CENTER;
     this.leftQuarterBoardBottomRight = boardVertices[bottomLeftVertexIndex]
       .add(boardVertices[bottomRightVertexIndex])
       .divide(2);
@@ -49,7 +51,7 @@ export default class HalfboardCoords {
     return this.leftQuarterBoardBottomRight;
   }
 
-  get leftQuarterBoardCoords() {
+  get leftQuarterBoardCorners() {
     return [
       this.leftQuarterBoardTopLeft,
       this.leftQuarterBoardTopRight,
@@ -58,7 +60,7 @@ export default class HalfboardCoords {
     ] as Quadrilateral;
   }
 
-  get rightQuarterBoardCoords() {
+  get rightQuarterBoardCorners() {
     return [
       this.rightQuarterBoardTopLeft,
       this.rightQuarterBoardTopRight,
@@ -67,54 +69,67 @@ export default class HalfboardCoords {
     ] as Quadrilateral;
   }
 
+  getSquare(pseudoRank: number, pseudoFile: number) {
+    const quarterBoardCorners =
+      pseudoFile < HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD
+        ? this.leftQuarterBoardCorners
+        : this.rightQuarterBoardCorners;
+    const adjustedPseudoFile =
+      pseudoFile % HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD;
+    const topLeftCoords = HalfboardCoords._bilinearInterpolation2D(
+      new Vector2D(
+        adjustedPseudoFile / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
+        1 - pseudoRank / HalfboardState.NUM_PSEUDO_RANKS
+      ),
+      quarterBoardCorners
+    );
+    const topRightCoords = HalfboardCoords._bilinearInterpolation2D(
+      new Vector2D(
+        (adjustedPseudoFile + 1) / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
+        1 - pseudoRank / HalfboardState.NUM_PSEUDO_RANKS
+      ),
+      quarterBoardCorners
+    );
+    const bottomRightCoords = HalfboardCoords._bilinearInterpolation2D(
+      new Vector2D(
+        (adjustedPseudoFile + 1) / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
+        1 - (pseudoRank + 1) / HalfboardState.NUM_PSEUDO_RANKS
+      ),
+      quarterBoardCorners
+    );
+    const bottomLeftCoords = HalfboardCoords._bilinearInterpolation2D(
+      new Vector2D(
+        adjustedPseudoFile / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
+        1 - (pseudoRank + 1) / HalfboardState.NUM_PSEUDO_RANKS
+      ),
+      quarterBoardCorners
+    );
+    return [
+      topLeftCoords,
+      topRightCoords,
+      bottomRightCoords,
+      bottomLeftCoords,
+    ] as Quadrilateral;
+  }
+
   getDarkSquares() {
     const darkSquares: Quadrilateral[] = [];
-    // Each quarter-board is a quarter of a regular chessboard, containing 4×4 tiles. The tile in the bottom-left is black
-    for (const quarterBoardCoords of [
-      this.leftQuarterBoardCoords,
-      this.rightQuarterBoardCoords,
-    ]) {
-      for (let i = 0; i < NUM_LINEAR_TILES_PER_BOARD; i++) {
-        for (let j = 0; j < NUM_LINEAR_TILES_PER_BOARD; j++) {
-          if ((i + j) % 2 != 0) {
-            continue;
-          }
-          const topLeftUnitSquareCoords = new Vector2D(
-            i / NUM_LINEAR_TILES_PER_BOARD,
-            (j + 1) / NUM_LINEAR_TILES_PER_BOARD
-          );
-          const topRightUnitSquareCoords = new Vector2D(
-            (i + 1) / NUM_LINEAR_TILES_PER_BOARD,
-            (j + 1) / NUM_LINEAR_TILES_PER_BOARD
-          );
-          const bottomRightUnitSquareCoords = new Vector2D(
-            (i + 1) / NUM_LINEAR_TILES_PER_BOARD,
-            j / NUM_LINEAR_TILES_PER_BOARD
-          );
-          const bottomLeftUnitSquareCoords = new Vector2D(
-            i / NUM_LINEAR_TILES_PER_BOARD,
-            j / NUM_LINEAR_TILES_PER_BOARD
-          );
-          const transformedCoords = [
-            HalfboardCoords._bilinearInterpolation2D(
-              topLeftUnitSquareCoords,
-              quarterBoardCoords
-            ),
-            HalfboardCoords._bilinearInterpolation2D(
-              topRightUnitSquareCoords,
-              quarterBoardCoords
-            ),
-            HalfboardCoords._bilinearInterpolation2D(
-              bottomRightUnitSquareCoords,
-              quarterBoardCoords
-            ),
-            HalfboardCoords._bilinearInterpolation2D(
-              bottomLeftUnitSquareCoords,
-              quarterBoardCoords
-            ),
-          ] as Quadrilateral;
-          darkSquares.push(transformedCoords);
+    // Each quarter-board is a quarter of a regular chessboard, containing 4×4 tiles. The tile in the top-left is white
+    for (
+      let pseudoRank = 0;
+      pseudoRank < HalfboardState.NUM_PSEUDO_RANKS;
+      pseudoRank++
+    ) {
+      for (
+        let pseudoFile = 0;
+        pseudoFile < HalfboardState.NUM_PSEUDO_FILES;
+        pseudoFile++
+      ) {
+        if ((pseudoRank + pseudoFile) % 2 === 0) {
+          continue;
         }
+        const darkSquare = this.getSquare(pseudoRank, pseudoFile);
+        darkSquares.push(darkSquare);
       }
     }
     return darkSquares;
