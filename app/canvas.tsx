@@ -87,7 +87,7 @@ export default function BoardCanvas() {
     const [deltaX, deltaY] = [x - centerX, y - centerY];
     const rtheta = [
       (2 * Math.sqrt(deltaX ** 2 + deltaY ** 2)) / canvasWidth,
-      ((Math.atan2(-deltaY, deltaX) % (2 * Math.PI)) + 2 * Math.PI) %
+      ((Math.atan2(deltaY, deltaX) % (2 * Math.PI)) + 2 * Math.PI) %
         (2 * Math.PI),
     ] as const;
     return rtheta;

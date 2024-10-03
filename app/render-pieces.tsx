@@ -8,6 +8,7 @@ export default function renderBoard(
   boardCoords: BoardCoords,
   boardState: BoardState
 ) {
+  const NUM_POINTS_IN_QUADRILATERAL = 4;
   for (
     let halfboardIndex = 0;
     halfboardIndex < boardState.halfboards.length;
@@ -31,14 +32,39 @@ export default function renderBoard(
             pseudoRankIndex,
             pseudoFileIndex
           );
-          const sortedXValues = square.map((vec) => vec.x).toSorted();
-          const sortedYValues = square.map((vec) => vec.y).toSorted();
-          const xSize = sortedXValues[3] - sortedXValues[0];
-          const ySize = sortedYValues[3] - sortedYValues[0];
-          const size = Math.min(xSize, ySize);
-          const centerX = sortedXValues[0] + xSize / 2;
-          const centerY = sortedYValues[0] + ySize / 2;
-          drawPiece(piece, ctx, centerX - size / 2, centerY - size / 2, size);
+          // 1: Find the centroid
+          const centroid = square
+            .reduce((acc, curr) => acc.add(curr))
+            .divide(NUM_POINTS_IN_QUADRILATERAL);
+          // 2: Find the smallest distance to any of the enclosing lines
+          // This gives us the largest circle centered on the centroid contained entirely within the square
+          const distanceOfClosestPointFromCentroid = square.map(
+            (pointA, index) => {
+              // https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
+              const pointB = square[(index + 1) % NUM_POINTS_IN_QUADRILATERAL];
+              return Math.abs(
+                ((pointB.y - pointA.y) * centroid.x -
+                  (pointB.x - pointA.x) * centroid.y +
+                  pointB.x * pointA.y -
+                  pointB.y * pointA.x) /
+                  Math.sqrt(
+                    (pointB.y - pointA.y) ** 2 + (pointB.x - pointA.x) ** 2
+                  )
+              );
+            }
+          );
+          const minDistance = Math.min(...distanceOfClosestPointFromCentroid);
+          // 3: Draw the piece with double the size of the radius of the circle we just found.
+          // This means that circle is inscribed within the square to which the piece is drawn.
+          // Because the square is larger than the circle, there might be some slight overlap,
+          // but the way the pieces are actually drawn stays mostly inside, so it looks pretty good.
+          drawPiece(
+            piece,
+            ctx,
+            centroid.x - minDistance,
+            centroid.y - minDistance,
+            minDistance * 2
+          );
         }
       }
     }
