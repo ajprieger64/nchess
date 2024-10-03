@@ -22,4 +22,8 @@ export default class Vector2D {
   divide(other: number) {
     return new Vector2D(this.x / other, this.y / other);
   }
+
+  cross(other: Vector2D) {
+    return this.x * other.y - this.y * other.x;
+  }
 }

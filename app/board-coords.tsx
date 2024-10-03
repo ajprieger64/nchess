@@ -37,7 +37,7 @@ export default class BoardCoords {
       this.boardVertices.push(unitSquareCoords);
     }
     this.halfboards = [];
-    for (let boardIndex = 0; boardIndex < numSides; boardIndex++) {
+    for (let boardIndex = 0; boardIndex < numPlayers; boardIndex++) {
       this.halfboards.push(new HalfboardCoords(this.boardVertices, boardIndex));
     }
   }

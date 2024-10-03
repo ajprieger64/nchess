@@ -1,5 +1,11 @@
 import HalfboardState from "./halfboard-state";
 
+export interface SquareCoords {
+  halfboard: number;
+  pseudoRank: number;
+  pseudoFile: number;
+}
+
 export default class BoardState {
   n: number;
   halfboards: Array<HalfboardState>;

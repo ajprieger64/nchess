@@ -1,7 +1,7 @@
 import HalfboardState from "./halfboard-state";
 import Vector2D from "./vector";
 
-type Quadrilateral = [Vector2D, Vector2D, Vector2D, Vector2D];
+export type Quadrilateral = [Vector2D, Vector2D, Vector2D, Vector2D];
 
 export default class HalfboardCoords {
   static BOARD_CENTER = new Vector2D(0.5, 0.5);
@@ -140,15 +140,10 @@ export default class HalfboardCoords {
     start: Vector2D,
     destination: [Vector2D, Vector2D, Vector2D, Vector2D]
   ): Vector2D {
-    // First, interpolate along the x-axis (in the pre-transformation space), resulting in a single line (given by 2 points) that runs parallel to the y-axis (pre-transformation)
-    const [topLeft, topRight, bottomRight, bottomLeft] = destination;
-    const topVector = topRight.subtract(topLeft);
-    const bottomVector = bottomRight.subtract(bottomLeft);
-    const topPoint = topLeft.add(topVector.multiply(start.x));
-    const bottomPoint = bottomLeft.add(bottomVector.multiply(start.x));
-    // Next, linearly interpolate along the line produced to get our final point
-    const lineVector = topPoint.subtract(bottomPoint);
-    const transformedPoint = bottomPoint.add(lineVector.multiply(start.y));
-    return transformedPoint;
+    return destination[0]
+      .multiply((1 - start.x) * start.y)
+      .add(destination[1].multiply(start.x * start.y))
+      .add(destination[2].multiply(start.x * (1 - start.y)))
+      .add(destination[3].multiply((1 - start.x) * (1 - start.y)));
   }
 }
