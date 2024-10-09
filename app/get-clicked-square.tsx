@@ -1,5 +1,5 @@
 import BoardCoords from "./board-coords";
-import { SquareCoords } from "./board-state";
+import { SquareIndex } from "./board-state";
 import HalfboardCoords, { Quadrilateral } from "./halfboard-coords";
 import HalfboardState from "./halfboard-state";
 import Vector2D from "./vector";
@@ -22,7 +22,7 @@ function isInsideQuadrilateral(
 export default function getClickedSquare(
   point: Vector2D,
   boardCoords: BoardCoords
-): SquareCoords | null {
+): SquareIndex | null {
   for (
     let halfboardIndex = 0;
     halfboardIndex < boardCoords.halfboards.length;

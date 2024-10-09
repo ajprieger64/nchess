@@ -6,12 +6,23 @@ Original and derivative work licensed under: CC BY-SA 3.0 (https://creativecommo
 The work has been altered from its original form as an SVG into the code below.
 */
 
+import getPieceColors from "./piece-colors";
+
+/*
+Creative Commons Attribution
+Original work: "Chess_ndt45.svg" by CBurnett
+URL: https://commons.wikimedia.org/wiki/File:Chess_ndt45.svg
+Original and derivative work licensed under: CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/)
+Part of the work has been altered from its original form as an SVG into the code below (section 'Dark colors only').
+*/
+
 export default function drawKnight(
   ctx: CanvasRenderingContext2D,
   player: number
 ) {
-  ctx.strokeStyle = "rgb(255, 255, 0)";
-  ctx.fillStyle = "rgb(255, 0, 255)";
+  const pieceColors = getPieceColors(ctx);
+  ctx.strokeStyle = pieceColors[player].borderColor;
+  ctx.fillStyle = pieceColors[player].interiorColor;
   ctx.lineWidth = 1.5;
 
   // Body
@@ -41,7 +52,8 @@ export default function drawKnight(
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "rgb(255, 255, 0)";
+  ctx.fillStyle = pieceColors[player].highlightColor;
+  ctx.strokeStyle = pieceColors[player].highlightColor;
   // Nose
   ctx.beginPath();
   ctx.moveTo(9.5, 25.5);
@@ -58,6 +70,7 @@ export default function drawKnight(
   // Eyes
   ctx.save();
   ctx.beginPath();
+  ctx.save();
   ctx.transform(0.866, 0.5, -0.5, 0.866, 9.693, -5.173);
   ctx.moveTo(15.0, 15.5);
   ctx.bezierCurveTo(15.0, 16.035898, 14.904701, 16.531089, 14.75, 16.799038);
@@ -83,4 +96,23 @@ export default function drawKnight(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+  ctx.restore();
+
+  if (pieceColors[player].isLight) return;
+
+  // Dark colors only
+  ctx.beginPath();
+  ctx.moveTo(24.55, 10.4);
+  ctx.lineTo(24.1, 11.85);
+  ctx.lineTo(24.6, 12.0);
+  ctx.bezierCurveTo(27.75, 13.0, 30.25, 14.49, 32.5, 18.75);
+  ctx.bezierCurveTo(34.75, 23.01, 35.75, 29.06, 35.25, 39.0);
+  ctx.lineTo(35.2, 39.5);
+  ctx.lineTo(37.45, 39.5);
+  ctx.lineTo(37.5, 39.0);
+  ctx.bezierCurveTo(38.0, 28.94, 36.62, 22.15, 34.25, 17.66);
+  ctx.bezierCurveTo(31.88, 13.17, 28.46, 11.02, 25.06, 10.5);
+  ctx.lineTo(24.55, 10.4);
+  //ctx.closePath();
+  ctx.fill();
 }

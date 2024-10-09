@@ -6,12 +6,23 @@ Original and derivative work licensed under: CC BY-SA 3.0 (https://creativecommo
 The work has been altered from its original form as an SVG into the code below.
 */
 
+/*
+Creative Commons Attribution
+Original work: "Chess_qdt45.svg" by CBurnett
+URL: https://commons.wikimedia.org/wiki/File:Chess_qdt45.svg
+Original and derivative work licensed under: CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/)
+Part of the work has been altered from its original form as an SVG into the code below (section 'Dark colors only').
+*/
+
+import getPieceColors from "./piece-colors";
+
 export default function drawQueen(
   ctx: CanvasRenderingContext2D,
   player: number
 ) {
-  ctx.strokeStyle = "rgb(255, 255, 0)";
-  ctx.fillStyle = "rgb(255, 0, 255)";
+  const pieceColors = getPieceColors(ctx);
+  ctx.strokeStyle = pieceColors[player].borderColor;
+  ctx.fillStyle = pieceColors[player].interiorColor;
   ctx.lineWidth = 1.5;
 
   // Crown lines
@@ -84,5 +95,22 @@ export default function drawQueen(
   ctx.beginPath();
   ctx.arc(39.0, 12.0, 2.0, 0.0, 6.28318531, true);
   ctx.fill();
+  ctx.stroke();
+
+  if (pieceColors[player].isLight) return;
+
+  // Dark colors only
+  // Ruffles
+  ctx.strokeStyle = pieceColors[player].highlightColor;
+
+  ctx.beginPath();
+  ctx.moveTo(11.0, 29.0);
+  ctx.bezierCurveTo(18.44776, 26.409026, 26.55224, 26.409026, 34.0, 29.0);
+  ctx.moveTo(12.5, 31.5);
+  ctx.lineTo(32.5, 31.5);
+  ctx.moveTo(11.5, 34.5);
+  ctx.bezierCurveTo(18.642708, 36.864673, 26.357292, 36.864673, 33.5, 34.5);
+  ctx.moveTo(10.5, 37.5);
+  ctx.bezierCurveTo(18.249973, 40.328581, 26.750027, 40.328581, 34.5, 37.5);
   ctx.stroke();
 }

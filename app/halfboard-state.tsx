@@ -36,4 +36,13 @@ export default class HalfboardState {
       ],
     ];
   }
+
+  deepCopy() {
+    const newHalfboard = new HalfboardState(0);
+    this.pieces.forEach(
+      (pseudoRank, pseudoRankIndex) =>
+        (newHalfboard.pieces[pseudoRankIndex] = pseudoRank.slice())
+    );
+    return newHalfboard;
+  }
 }

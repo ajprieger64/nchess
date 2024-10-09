@@ -6,12 +6,15 @@ Original and derivative work licensed under: CC BY-SA 3.0 (https://creativecommo
 The work has been altered from its original form as an SVG into the code below.
 */
 
+import getPieceColors from "./piece-colors";
+
 export default function drawBishop(
   ctx: CanvasRenderingContext2D,
   player: number
 ) {
-  ctx.strokeStyle = "rgb(255, 255, 0)";
-  ctx.fillStyle = "rgb(255, 0, 255)";
+  const pieceColors = getPieceColors(ctx);
+  ctx.strokeStyle = pieceColors[player].borderColor;
+  ctx.fillStyle = pieceColors[player].interiorColor;
   ctx.lineWidth = 1.5;
 
   // Base
@@ -62,6 +65,8 @@ export default function drawBishop(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+
+  ctx.strokeStyle = pieceColors[player].highlightColor;
 
   // Ruffles?
   ctx.beginPath();

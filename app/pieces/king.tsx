@@ -6,12 +6,15 @@ Original and derivative work licensed under: CC BY-SA 3.0 (https://creativecommo
 The work has been altered from its original form as an SVG into the code below.
 */
 
+import getPieceColors from "./piece-colors";
+
 export default function drawKing(
   ctx: CanvasRenderingContext2D,
   player: number
 ) {
-  ctx.strokeStyle = "rgb(255, 255, 0)";
-  ctx.fillStyle = "rgb(255, 0, 255)";
+  const pieceColors = getPieceColors(ctx);
+  ctx.strokeStyle = pieceColors[player].borderColor;
+  ctx.fillStyle = pieceColors[player].interiorColor;
   ctx.lineWidth = 1.5;
 
   // Cross
@@ -45,6 +48,19 @@ export default function drawKing(
   ctx.bezierCurveTo(3.5, 25.5, 12.5, 30.0, 12.5, 30.0);
   ctx.closePath();
   ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = pieceColors[player].highlightColor;
+
+  // Top curves
+  ctx.beginPath();
+  ctx.moveTo(32.5, 30.0);
+  ctx.bezierCurveTo(32.5, 30.0, 41.5, 25.5, 38.5, 19.5);
+  ctx.bezierCurveTo(34.5, 13.0, 25.0, 16.0, 22.5, 23.5);
+  ctx.lineTo(22.5, 27.0);
+  ctx.lineTo(22.5, 23.5);
+  ctx.bezierCurveTo(20.0, 16.0, 10.5, 13.0, 6.5, 19.5);
+  ctx.bezierCurveTo(3.5, 25.5, 12.5, 30.0, 12.5, 30.0);
   ctx.stroke();
 
   // Ruffles? Not sure what these are supposed to represent

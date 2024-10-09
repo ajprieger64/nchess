@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import BoardState from "./board-state";
+import BoardState, { SquareIndex } from "./board-state";
 import { CHESS_PIECE_LIST, ChessPieceType } from "./pieces";
 import drawPiece from "./pieces/draw-piece";
 import BoardRenderer from "./render-board";
@@ -27,7 +27,12 @@ export default function BoardCanvas() {
   const divRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardCoords = new BoardCoords(NUM_PLAYERS, 0, 0);
-  const boardState = new BoardState(NUM_PLAYERS);
+  const [boardState, setBoardState] = useState<BoardState>(
+    new BoardState(NUM_PLAYERS)
+  );
+  const [selectedSquare, setSelectedSquare] = useState<SquareIndex | null>(
+    null
+  );
 
   useEffect(() => {
     const div = divRef.current;
@@ -81,11 +86,12 @@ export default function BoardCanvas() {
     ).divide(drawAreaSize ?? 1);
     const clickedSquare = getClickedSquare(point, boardCoords);
     if (clickedSquare) {
-      console.log(
-        boardState.halfboards[clickedSquare.halfboard].pieces[
-          clickedSquare.pseudoRank
-        ][clickedSquare.pseudoFile]
-      );
+      if (selectedSquare === null) {
+        setSelectedSquare(clickedSquare);
+      } else {
+        setBoardState(boardState.move(selectedSquare, clickedSquare));
+        setSelectedSquare(null);
+      }
     }
   }
 
