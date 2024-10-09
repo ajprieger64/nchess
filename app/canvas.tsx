@@ -86,6 +86,15 @@ export default function BoardCanvas() {
     ).divide(drawAreaSize ?? 1);
     const clickedSquare = getClickedSquare(point, boardCoords);
     if (clickedSquare) {
+      const diagonals = boardState.getDiagonals(clickedSquare, 0);
+      const horizontalVerticals = boardState.getHorizontalVerticals(
+        clickedSquare,
+        0
+      );
+      const knightMoves = boardState.getKnightMoves(clickedSquare);
+      console.log("Diagonals:", diagonals);
+      console.log("Verticals and horizontals:", horizontalVerticals);
+      console.log("Knight moves:", knightMoves);
       if (selectedSquare === null) {
         setSelectedSquare(clickedSquare);
       } else {

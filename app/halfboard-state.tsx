@@ -3,6 +3,8 @@ import { ChessPiece } from "./pieces";
 export default class HalfboardState {
   static NUM_PSEUDO_FILES = 8;
   static NUM_PSEUDO_RANKS = 4;
+  static LEFT_MIDDLE_FILE = 3;
+  static RIGHT_MIDDLE_FILE = 4;
   pieces: (ChessPiece | null)[][];
   constructor(startingPlayer: number) {
     this.pieces = [
