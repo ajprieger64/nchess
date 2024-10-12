@@ -281,6 +281,18 @@ export default class BoardController {
     return pawnMoves;
   }
 
+  _getPawnAttackedSquares(from: SquareIndex, player: number) {
+    const diagonals = this.getDiagonals(from, player).flat();
+    const pawnMoves: SquareIndex[] = [];
+    for (const diagonalSquare of diagonals) {
+      const piece = this.boardState.getPiece(diagonalSquare);
+      if (piece !== null && piece.player !== player) {
+        pawnMoves.push(diagonalSquare);
+      }
+    }
+    return pawnMoves;
+  }
+
   getUnobstructedMoves(from: SquareIndex, piece: ChessPiece) {
     let unobstructedMoves: SquareIndex[];
     switch (piece.pieceType) {
@@ -312,12 +324,42 @@ export default class BoardController {
     return unobstructedMoves;
   }
 
+  getAttackedSquares(from: SquareIndex, piece: ChessPiece) {
+    if (piece.pieceType === "p") {
+      return this._getPawnAttackedSquares(from, piece.player);
+    }
+    return this.getUnobstructedMoves(from, piece);
+  }
+
   getValidMoves(
     from: SquareIndex,
     piece: ChessPiece | null = this.boardState.getPiece(from)
   ) {
     if (!piece) return [];
-    return this.getUnobstructedMoves(from, piece);
+    const unobstructedMoves = this.getUnobstructedMoves(from, piece);
+    const kingProtectingMoves = unobstructedMoves.filter((move) => {
+      const potentialBoard = this.boardState.move(from, move);
+      for (const boardIndex of potentialBoard) {
+        const attackingPiece = potentialBoard.getPiece(boardIndex);
+        if (attackingPiece !== null && attackingPiece.player !== piece.player) {
+          const potentialBoardController = new BoardController(potentialBoard);
+          const kingIndex = potentialBoard.getKingIndex(piece.player);
+          const attackedSquares = potentialBoardController.getAttackedSquares(
+            boardIndex,
+            attackingPiece
+          );
+          if (
+            attackedSquares.some((attackedSquare) =>
+              attackedSquare.equals(kingIndex)
+            )
+          ) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+    return kingProtectingMoves;
   }
 
   isValidMove(
@@ -328,5 +370,15 @@ export default class BoardController {
     if (!piece) return false;
     const validMoves = this.getValidMoves(from, piece);
     return validMoves.some((validMove) => validMove.equals(to));
+  }
+
+  isCheckmated(player: number = this.boardState.currentPlayerTurn) {
+    for (const boardIndex of this.boardState) {
+      const piece = this.boardState.getPiece(boardIndex);
+      if (piece?.player !== player) continue;
+      const validMoves = this.getValidMoves(boardIndex);
+      if (validMoves.length) return false;
+    }
+    return true;
   }
 }

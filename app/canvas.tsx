@@ -75,6 +75,11 @@ export default function BoardCanvas() {
         [selectedSquare].concat(boardController.getValidMoves(selectedSquare))
       );
     }
+
+    console.log(
+      `Is player ${boardState.currentPlayerTurn} checkmated:`,
+      boardController.isCheckmated()
+    );
     return () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.resetTransform();

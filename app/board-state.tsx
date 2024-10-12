@@ -124,4 +124,37 @@ export default class BoardState {
     newBoard.currentPlayerTurn %= newBoard.n;
     return newBoard;
   }
+
+  getKingIndex(player: number): SquareIndex {
+    for (const boardIndex of this) {
+      const piece = this.getPiece(boardIndex);
+      if (piece?.pieceType === "K" && piece.player === player) {
+        return boardIndex;
+      }
+    }
+    throw Error("King could not be found on the board.");
+  }
+
+  *[Symbol.iterator]() {
+    for (let halfboardIndex = 0; halfboardIndex < this.n; halfboardIndex++) {
+      for (
+        let pseudoRankIndex = 0;
+        pseudoRankIndex < HalfboardState.NUM_PSEUDO_RANKS;
+        pseudoRankIndex++
+      ) {
+        for (
+          let pseudoFileIndex = 0;
+          pseudoFileIndex < HalfboardState.NUM_PSEUDO_FILES;
+          pseudoFileIndex++
+        ) {
+          const boardIndex = new SquareIndex(
+            halfboardIndex,
+            pseudoRankIndex,
+            pseudoFileIndex
+          );
+          yield boardIndex;
+        }
+      }
+    }
+  }
 }
