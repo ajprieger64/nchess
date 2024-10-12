@@ -4,6 +4,9 @@ import { useContext, useEffect } from "react";
 import Vector2D from "./vector";
 import BoardCoords from "./board-coords";
 
+const LIGHT_COLOR = "papayawhip";
+const DARK_COLOR = "peru";
+
 function getUnitSquarePath() {
   const unitSquarePath = new Path2D();
   unitSquarePath.moveTo(0, 0);
@@ -52,9 +55,9 @@ export default function renderBoard(
   ctx.fillStyle = "rgb(255, 0, 0)";
   ctx.fill(unitSquarePath);
 
-  ctx.fillStyle = "rgb(0, 255, 0)";
+  ctx.fillStyle = LIGHT_COLOR;
   ctx.fill(boardBackgroundPath);
 
-  ctx.fillStyle = "rgb(0, 0, 255)";
+  ctx.fillStyle = DARK_COLOR;
   ctx.fill(darkSquaresPath);
 }

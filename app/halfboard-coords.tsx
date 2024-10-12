@@ -79,28 +79,28 @@ export default class HalfboardCoords {
     const topLeftCoords = HalfboardCoords._bilinearInterpolation2D(
       new Vector2D(
         adjustedPseudoFile / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
-        1 - pseudoRank / HalfboardState.NUM_PSEUDO_RANKS
+        (pseudoRank + 1) / HalfboardState.NUM_PSEUDO_RANKS
       ),
       quarterBoardCorners
     );
     const topRightCoords = HalfboardCoords._bilinearInterpolation2D(
       new Vector2D(
         (adjustedPseudoFile + 1) / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
-        1 - pseudoRank / HalfboardState.NUM_PSEUDO_RANKS
+        (pseudoRank + 1) / HalfboardState.NUM_PSEUDO_RANKS
       ),
       quarterBoardCorners
     );
     const bottomRightCoords = HalfboardCoords._bilinearInterpolation2D(
       new Vector2D(
         (adjustedPseudoFile + 1) / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
-        1 - (pseudoRank + 1) / HalfboardState.NUM_PSEUDO_RANKS
+        pseudoRank / HalfboardState.NUM_PSEUDO_RANKS
       ),
       quarterBoardCorners
     );
     const bottomLeftCoords = HalfboardCoords._bilinearInterpolation2D(
       new Vector2D(
         adjustedPseudoFile / HalfboardCoords.NUM_FILES_PER_QUARTER_BOARD,
-        1 - (pseudoRank + 1) / HalfboardState.NUM_PSEUDO_RANKS
+        pseudoRank / HalfboardState.NUM_PSEUDO_RANKS
       ),
       quarterBoardCorners
     );
@@ -114,7 +114,7 @@ export default class HalfboardCoords {
 
   getDarkSquares() {
     const darkSquares: Quadrilateral[] = [];
-    // Each quarter-board is a quarter of a regular chessboard, containing 4×4 tiles. The tile in the top-left is white
+    // Each quarter-board is a quarter of a regular chessboard, containing 4×4 tiles. The tile in the bottom-left is black
     for (
       let pseudoRank = 0;
       pseudoRank < HalfboardState.NUM_PSEUDO_RANKS;
@@ -125,7 +125,7 @@ export default class HalfboardCoords {
         pseudoFile < HalfboardState.NUM_PSEUDO_FILES;
         pseudoFile++
       ) {
-        if ((pseudoRank + pseudoFile) % 2 === 0) {
+        if ((pseudoRank + pseudoFile) % 2 !== 0) {
           continue;
         }
         const darkSquare = this.getSquare(pseudoRank, pseudoFile);

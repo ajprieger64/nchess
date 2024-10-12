@@ -22,7 +22,7 @@ function isInsideQuadrilateral(
 export default function getClickedSquare(
   point: Vector2D,
   boardCoords: BoardCoords
-): SquareIndex | null {
+) {
   for (
     let halfboardIndex = 0;
     halfboardIndex < boardCoords.halfboards.length;
@@ -56,11 +56,11 @@ export default function getClickedSquare(
             );
 
             if (isInsideQuadrilateral(point, square)) {
-              return {
-                halfboard: halfboardIndex,
-                pseudoRank: pseudoRankIndex,
-                pseudoFile: pseudoFileIndex,
-              };
+              return new SquareIndex(
+                halfboardIndex,
+                pseudoRankIndex,
+                pseudoFileIndex
+              );
             }
           }
         }

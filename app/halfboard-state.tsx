@@ -8,18 +8,6 @@ export default class HalfboardState {
   pieces: (ChessPiece | null)[][];
   constructor(startingPlayer: number) {
     this.pieces = [
-      [null, null, null, null, null, null, null, null],
-      [null, null, null, null, null, null, null, null],
-      [
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-        { player: startingPlayer, pieceType: "p" },
-      ],
       [
         { player: startingPlayer, pieceType: "R" },
         { player: startingPlayer, pieceType: "N" },
@@ -36,6 +24,18 @@ export default class HalfboardState {
         { player: startingPlayer, pieceType: "N" },
         { player: startingPlayer, pieceType: "R" },
       ],
+      [
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+        { player: startingPlayer, pieceType: "p" },
+      ],
+      [null, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null],
     ];
   }
 

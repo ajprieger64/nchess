@@ -10,6 +10,8 @@ import BoardCoords from "./board-coords";
 import renderPieces from "./render-pieces";
 import Vector2D from "./vector";
 import getClickedSquare from "./get-clicked-square";
+import BoardController from "./board-controller";
+import renderSelectedSquares from "./render-selected-squares";
 
 export default function BoardCanvas() {
   const SIZE = 1000;
@@ -30,9 +32,11 @@ export default function BoardCanvas() {
   const [boardState, setBoardState] = useState<BoardState>(
     new BoardState(NUM_PLAYERS)
   );
+  const boardController = new BoardController(boardState);
   const [selectedSquare, setSelectedSquare] = useState<SquareIndex | null>(
     null
   );
+  console.log("Selected square:", selectedSquare);
 
   useEffect(() => {
     const div = divRef.current;
@@ -64,18 +68,26 @@ export default function BoardCanvas() {
 
     renderBoard(ctx, boardCoords);
     renderPieces(ctx, boardCoords, boardState);
-
+    if (selectedSquare) {
+      renderSelectedSquares(
+        ctx,
+        boardCoords,
+        [selectedSquare].concat(boardController.getValidMoves(selectedSquare))
+      );
+    }
     return () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.resetTransform();
     };
   }, [
+    boardController,
     boardCoords,
     boardState,
     canvasRef,
     drawAreaLeft,
     drawAreaSize,
     drawAreaTop,
+    selectedSquare,
     widthHeight,
   ]);
 
@@ -85,20 +97,18 @@ export default function BoardCanvas() {
       e.clientY - (drawAreaTop ?? 0)
     ).divide(drawAreaSize ?? 1);
     const clickedSquare = getClickedSquare(point, boardCoords);
-    if (clickedSquare) {
-      const diagonals = boardState.getDiagonals(clickedSquare, 0);
-      const horizontalVerticals = boardState.getHorizontalVerticals(
-        clickedSquare,
-        0
-      );
-      const knightMoves = boardState.getKnightMoves(clickedSquare);
-      console.log("Diagonals:", diagonals);
-      console.log("Verticals and horizontals:", horizontalVerticals);
-      console.log("Knight moves:", knightMoves);
-      if (selectedSquare === null) {
+    if (clickedSquare !== null) {
+      if (
+        !selectedSquare &&
+        boardState.getPiece(clickedSquare)?.player ===
+          boardState.currentPlayerTurn
+      ) {
         setSelectedSquare(clickedSquare);
-      } else {
-        setBoardState(boardState.move(selectedSquare, clickedSquare));
+      }
+      if (selectedSquare !== null) {
+        if (boardController.isValidMove(selectedSquare, clickedSquare)) {
+          setBoardState(boardState.move(selectedSquare, clickedSquare));
+        }
         setSelectedSquare(null);
       }
     }
