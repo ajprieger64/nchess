@@ -3,8 +3,10 @@ import { ChessPiece } from "./pieces";
 export default class HalfboardState {
   static NUM_PSEUDO_FILES = 8;
   static NUM_PSEUDO_RANKS = 4;
-  static LEFT_MIDDLE_FILE = 3;
-  static RIGHT_MIDDLE_FILE = 4;
+  static MIDDLE_FILE = 4;
+  hasLeftRookMoved: boolean;
+  hasRightRookMoved: boolean;
+  hasKingMoved: boolean;
   pieces: (ChessPiece | null)[][];
   constructor(startingPlayer: number) {
     this.pieces = [
@@ -37,14 +39,20 @@ export default class HalfboardState {
       [null, null, null, null, null, null, null, null],
       [null, null, null, null, null, null, null, null],
     ];
+    this.hasKingMoved = false;
+    this.hasLeftRookMoved = false;
+    this.hasRightRookMoved = false;
   }
 
   deepCopy() {
-    const newHalfboard = new HalfboardState(0);
+    const newHalfboardPosition = new HalfboardState(0);
     this.pieces.forEach(
       (pseudoRank, pseudoRankIndex) =>
-        (newHalfboard.pieces[pseudoRankIndex] = pseudoRank.slice())
+        (newHalfboardPosition.pieces[pseudoRankIndex] = pseudoRank.slice())
     );
-    return newHalfboard;
+    newHalfboardPosition.hasKingMoved = this.hasKingMoved;
+    newHalfboardPosition.hasLeftRookMoved = this.hasLeftRookMoved;
+    newHalfboardPosition.hasRightRookMoved = this.hasRightRookMoved;
+    return newHalfboardPosition;
   }
 }

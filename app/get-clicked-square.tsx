@@ -1,7 +1,7 @@
 import BoardCoords from "./board-coords";
-import { SquareIndex } from "./board-state";
 import HalfboardCoords, { Quadrilateral } from "./halfboard-coords";
 import HalfboardState from "./halfboard-state";
+import SquareIndex from "./square-index";
 import Vector2D from "./vector";
 
 function isInsideQuadrilateral(

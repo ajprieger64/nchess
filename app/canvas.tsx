@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import BoardState, { SquareIndex } from "./board-state";
-import { CHESS_PIECE_LIST, ChessPieceType } from "./pieces";
+import BoardState from "./board-state";
 import drawPiece from "./pieces/draw-piece";
 import BoardRenderer from "./render-board";
 import renderBoard from "./render-board";
@@ -10,8 +9,8 @@ import BoardCoords from "./board-coords";
 import renderPieces from "./render-pieces";
 import Vector2D from "./vector";
 import getClickedSquare from "./get-clicked-square";
-import BoardController from "./board-controller";
 import renderSelectedSquares from "./render-selected-squares";
+import SquareIndex from "./square-index";
 
 export default function BoardCanvas() {
   const SIZE = 1000;
@@ -32,11 +31,9 @@ export default function BoardCanvas() {
   const [boardState, setBoardState] = useState<BoardState>(
     new BoardState(NUM_PLAYERS)
   );
-  const boardController = new BoardController(boardState);
   const [selectedSquare, setSelectedSquare] = useState<SquareIndex | null>(
     null
   );
-  console.log("Selected square:", selectedSquare);
 
   useEffect(() => {
     const div = divRef.current;
@@ -72,20 +69,23 @@ export default function BoardCanvas() {
       renderSelectedSquares(
         ctx,
         boardCoords,
-        [selectedSquare].concat(boardController.getValidMoves(selectedSquare))
+        [selectedSquare].concat(boardState.getLegalMoves(selectedSquare))
+      );
+    }
+    for (let i = 0; i < NUM_PLAYERS; i++) {
+      console.log(
+        `Player ${i} (in check, checkmated, stalemated): `,
+        boardState._isInCheck(i),
+        boardState.isCheckmated(i),
+        boardState.isStalemated(i)
       );
     }
 
-    console.log(
-      `Is player ${boardState.currentPlayerTurn} checkmated:`,
-      boardController.isCheckmated()
-    );
     return () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.resetTransform();
     };
   }, [
-    boardController,
     boardCoords,
     boardState,
     canvasRef,
@@ -103,15 +103,11 @@ export default function BoardCanvas() {
     ).divide(drawAreaSize ?? 1);
     const clickedSquare = getClickedSquare(point, boardCoords);
     if (clickedSquare !== null) {
-      if (
-        !selectedSquare &&
-        boardState.getPiece(clickedSquare)?.player ===
-          boardState.currentPlayerTurn
-      ) {
+      if (!selectedSquare) {
         setSelectedSquare(clickedSquare);
       }
       if (selectedSquare !== null) {
-        if (boardController.isValidMove(selectedSquare, clickedSquare)) {
+        if (boardState.isLegalMove(selectedSquare, clickedSquare)) {
           setBoardState(boardState.move(selectedSquare, clickedSquare));
         }
         setSelectedSquare(null);
