@@ -1,4 +1,5 @@
 import HalfboardCoords from "./halfboard-coords";
+import SquareIndex from "./square-index";
 import Vector2D from "./vector";
 
 // TODO: Check whether the board would look better if this were dynamically based on the number of sides
@@ -40,6 +41,13 @@ export default class BoardCoords {
     for (let boardIndex = 0; boardIndex < numPlayers; boardIndex++) {
       this.halfboards.push(new HalfboardCoords(this.boardVertices, boardIndex));
     }
+  }
+
+  getSquare(index: SquareIndex) {
+    return this.halfboards[index.halfboard].getSquare(
+      index.pseudoRank,
+      index.pseudoFile
+    );
   }
 
   static _zoomTransformation(strength: number, x: number) {

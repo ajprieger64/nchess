@@ -11,6 +11,7 @@ import Vector2D from "./vector";
 import getClickedSquare from "./get-clicked-square";
 import renderSelectedSquares from "./render-selected-squares";
 import SquareIndex from "./square-index";
+import renderPromotionMenu from "./render-promotion-menu";
 
 export default function BoardCanvas() {
   const SIZE = 1000;
@@ -69,15 +70,22 @@ export default function BoardCanvas() {
       renderSelectedSquares(
         ctx,
         boardCoords,
-        [selectedSquare].concat(boardState.getLegalMoves(selectedSquare))
+        [selectedSquare].concat(
+          boardState.getLegalStandardMoves(selectedSquare)
+        )
       );
+    }
+    if (boardState.pawnUpForPromotion) {
+      console.log("Pawn up for promotion at", boardState.pawnUpForPromotion);
+      renderPromotionMenu(ctx, boardCoords, boardState.pawnUpForPromotion);
     }
     for (let i = 0; i < NUM_PLAYERS; i++) {
       console.log(
-        `Player ${i} (in check, checkmated, stalemated): `,
+        `Player ${i} (in check, checkmated, stalemated, is queenside castle legal, is kingside castle legal): `,
         boardState._isInCheck(i),
         boardState.isCheckmated(i),
-        boardState.isStalemated(i)
+        boardState.isStalemated(i),
+        ...boardState.isCastleLegal(i)
       );
     }
 
@@ -107,7 +115,7 @@ export default function BoardCanvas() {
         setSelectedSquare(clickedSquare);
       }
       if (selectedSquare !== null) {
-        if (boardState.isLegalMove(selectedSquare, clickedSquare)) {
+        if (boardState.isLegalStandardMove(selectedSquare, clickedSquare)) {
           setBoardState(boardState.move(selectedSquare, clickedSquare));
         }
         setSelectedSquare(null);

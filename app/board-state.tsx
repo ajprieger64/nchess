@@ -5,8 +5,9 @@ import SquareIndex from "./square-index";
 export default class BoardState {
   static NUM_PSEUDO_RANKS_PER_FILE = 8;
   n: number;
-  halfboards: Array<HalfboardState>;
+  halfboards: HalfboardState[];
   currentPlayerTurn: number;
+  pawnUpForPromotion: SquareIndex | null;
   constructor(n: number) {
     this.n = n;
     this.halfboards = Array();
@@ -14,6 +15,7 @@ export default class BoardState {
       this.halfboards.push(new HalfboardState(i));
     }
     this.currentPlayerTurn = 0;
+    this.pawnUpForPromotion = null;
   }
 
   deepCopy() {
@@ -23,6 +25,7 @@ export default class BoardState {
         (newBoard.halfboards[halfboardIndex] = halfboard.deepCopy())
     );
     newBoard.currentPlayerTurn = this.currentPlayerTurn;
+    newBoard.pawnUpForPromotion = this.pawnUpForPromotion;
     return newBoard;
   }
 
@@ -56,6 +59,9 @@ export default class BoardState {
   }
 
   move(from: SquareIndex, to: SquareIndex) {
+    if (from.equals(to)) {
+      return this;
+    }
     const newBoard = this.deepCopy();
     const fromSquare =
       newBoard.halfboards[from.halfboard].pieces[from.pseudoRank][
@@ -66,9 +72,36 @@ export default class BoardState {
     newBoard.halfboards[from.halfboard].pieces[from.pseudoRank][
       from.pseudoFile
     ] = null;
-    newBoard.currentPlayerTurn++;
-    newBoard.currentPlayerTurn %= newBoard.n;
+    if (
+      (from.pseudoRank === 0 && from.pseudoFile === 0) ||
+      (to.pseudoRank === 0 && to.pseudoFile === 0)
+    ) {
+      newBoard.halfboards[from.halfboard].hasLeftRookMoved = true;
+    }
+    if (
+      (from.pseudoRank === 0 && from.pseudoFile === 7) ||
+      (to.pseudoRank === 0 && to.pseudoFile === 7)
+    ) {
+      newBoard.halfboards[from.halfboard].hasRightRookMoved = true;
+    }
+    if (this.getPiece(from)?.pieceType === "K") {
+      newBoard.halfboards[from.halfboard].hasKingMoved = true;
+    }
+    if (this.getPiece(from)?.pieceType === "p" && to.pseudoRank === 0) {
+      newBoard.pawnUpForPromotion = to;
+    }
     return newBoard;
+  }
+
+  promotePawn(to: "Q" | "N" | "B" | "R") {
+    const pawnSquare = this.pawnUpForPromotion;
+    if (!pawnSquare) return this;
+    const newBoard = this.deepCopy();
+    const pawn = newBoard.getPiece(pawnSquare);
+    if (!pawn) return this;
+    newBoard.halfboards[pawnSquare.halfboard].pieces[pawnSquare.pseudoRank][
+      pawnSquare.pseudoFile
+    ] = { pieceType: to, player: pawn.player };
   }
 
   _normalizeIndex(index: SquareIndex, fromIndex: SquareIndex) {
@@ -336,7 +369,7 @@ export default class BoardState {
     return false;
   }
 
-  getLegalMoves(from: SquareIndex, piece = this.getPiece(from)) {
+  getLegalStandardMoves(from: SquareIndex, piece = this.getPiece(from)) {
     if (piece === null) return [];
     const unobstructedMoves = this._getUnobstructedMoves(from, piece);
     return unobstructedMoves.filter((square) => {
@@ -345,8 +378,8 @@ export default class BoardState {
     });
   }
 
-  isLegalMove(from: SquareIndex, to: SquareIndex) {
-    const legalMoves = this.getLegalMoves(from);
+  isLegalStandardMove(from: SquareIndex, to: SquareIndex) {
+    const legalMoves = this.getLegalStandardMoves(from);
     if (legalMoves.every((square) => !square.equals(to))) {
       return false;
     }
@@ -357,11 +390,57 @@ export default class BoardState {
     for (const boardIndex of this) {
       const piece = this.getPiece(boardIndex);
       if (piece?.player === player) {
-        const legalMoves = this.getLegalMoves(boardIndex, piece);
+        const legalMoves = this.getLegalStandardMoves(boardIndex, piece);
         if (legalMoves.length) return true;
       }
     }
     return false;
+  }
+
+  isCastleLegal(player: number) {
+    if (this.halfboards[player].hasKingMoved || this._isInCheck(player)) {
+      return [false, false];
+    }
+    const kingIndex = new SquareIndex(player, 0, player % 2 === 0 ? 4 : 3);
+    let isLeftCastleLegal = true;
+    if (this.halfboards[player].hasLeftRookMoved) {
+      isLeftCastleLegal = false;
+    }
+    for (let pseudoFile = 1; pseudoFile < kingIndex.pseudoFile; pseudoFile++) {
+      const squareToCheck = new SquareIndex(player, 0, pseudoFile);
+      const piece = this.getPiece(squareToCheck);
+      if (piece !== null) {
+        isLeftCastleLegal = false;
+      }
+      if (!(pseudoFile === 1 && player % 2 === 0)) {
+        const kingMoveBoard = this.move(kingIndex, squareToCheck);
+        if (kingMoveBoard._isInCheck(player)) {
+          isLeftCastleLegal = false;
+        }
+      }
+    }
+    let isRightCastleLegal = true;
+    if (this.halfboards[player].hasRightRookMoved) {
+      isRightCastleLegal = false;
+    }
+    for (
+      let pseudoFile = kingIndex.pseudoFile + 1;
+      pseudoFile < 7;
+      pseudoFile++
+    ) {
+      const squareToCheck = new SquareIndex(player, 0, pseudoFile);
+      const piece = this.getPiece(squareToCheck);
+      if (piece !== null) {
+        isRightCastleLegal = false;
+      }
+      if (!(pseudoFile === 6 && player % 2 !== 0)) {
+        const kingMoveBoard = this.move(kingIndex, squareToCheck);
+        if (kingMoveBoard._isInCheck(player)) {
+          isRightCastleLegal = false;
+        }
+      }
+    }
+    return [isLeftCastleLegal, isRightCastleLegal];
   }
 
   isCheckmated(player: number) {

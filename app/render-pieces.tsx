@@ -1,6 +1,5 @@
 import BoardCoords from "./board-coords";
 import BoardState from "./board-state";
-import HalfboardState from "./halfboard-state";
 import drawPiece from "./pieces/draw-piece";
 
 export default function renderBoard(
@@ -10,13 +9,9 @@ export default function renderBoard(
 ) {
   const NUM_POINTS_IN_QUADRILATERAL = 4;
   for (const boardIndex of boardState) {
-    const halfboardCoords = boardCoords.halfboards[boardIndex.halfboard];
     const piece = boardState.getPiece(boardIndex);
     if (piece !== null) {
-      const square = halfboardCoords.getSquare(
-        boardIndex.pseudoRank,
-        boardIndex.pseudoFile
-      );
+      const square = boardCoords.getSquare(boardIndex);
       // 1: Find the centroid
       const centroid = square
         .reduce((acc, curr) => acc.add(curr))
