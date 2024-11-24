@@ -3,21 +3,15 @@
 import { useContext, useEffect } from "react";
 import Vector2D from "./vector";
 import BoardCoords from "./board-coords";
+import { fillQuad } from "./quadrilateral";
 
 const LIGHT_COLOR = "papayawhip";
 const DARK_COLOR = "peru";
 
-function getUnitSquarePath() {
-  const unitSquarePath = new Path2D();
-  unitSquarePath.moveTo(0, 0);
-  unitSquarePath.lineTo(1, 0);
-  unitSquarePath.lineTo(1, 1);
-  unitSquarePath.lineTo(0, 1);
-  unitSquarePath.closePath();
-  return unitSquarePath;
-}
-
-function getBoardBackgroundPath(boardCoords: BoardCoords) {
+function drawBoardBackground(
+  ctx: CanvasRenderingContext2D,
+  boardCoords: BoardCoords
+) {
   const boardBackgroundPath = new Path2D();
   boardBackgroundPath.moveTo(
     boardCoords.boardVertices[0].x,
@@ -27,18 +21,17 @@ function getBoardBackgroundPath(boardCoords: BoardCoords) {
     boardBackgroundPath.lineTo(vertex.x, vertex.y);
   }
   boardBackgroundPath.closePath();
-  return boardBackgroundPath;
+  ctx.fill(boardBackgroundPath);
 }
 
-function getDarkSquaresPath(boardCoords: BoardCoords) {
+function drawDarkSquares(
+  ctx: CanvasRenderingContext2D,
+  boardCoords: BoardCoords
+) {
   const darkSquaresPath = new Path2D();
   for (const halfboard of boardCoords.halfboards) {
     for (const darkSquare of halfboard.getDarkSquares()) {
-      darkSquaresPath.moveTo(darkSquare[0].x, darkSquare[0].y);
-      darkSquaresPath.lineTo(darkSquare[1].x, darkSquare[1].y);
-      darkSquaresPath.lineTo(darkSquare[2].x, darkSquare[2].y);
-      darkSquaresPath.lineTo(darkSquare[3].x, darkSquare[3].y);
-      darkSquaresPath.closePath();
+      fillQuad(ctx, darkSquare);
     }
   }
   return darkSquaresPath;
@@ -48,16 +41,18 @@ export default function renderBoard(
   ctx: CanvasRenderingContext2D,
   boardCoords: BoardCoords
 ) {
-  const unitSquarePath = getUnitSquarePath();
-  const boardBackgroundPath = getBoardBackgroundPath(boardCoords);
-  const darkSquaresPath = getDarkSquaresPath(boardCoords);
-
   ctx.fillStyle = "rgb(255, 0, 0)";
-  ctx.fill(unitSquarePath);
+  const unitSquare = [
+    new Vector2D(0, 0),
+    new Vector2D(1, 0),
+    new Vector2D(1, 1),
+    new Vector2D(0, 1),
+  ] as const;
+  fillQuad(ctx, unitSquare);
 
   ctx.fillStyle = LIGHT_COLOR;
-  ctx.fill(boardBackgroundPath);
+  drawBoardBackground(ctx, boardCoords);
 
   ctx.fillStyle = DARK_COLOR;
-  ctx.fill(darkSquaresPath);
+  drawDarkSquares(ctx, boardCoords);
 }

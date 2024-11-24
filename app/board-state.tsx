@@ -102,6 +102,8 @@ export default class BoardState {
     newBoard.halfboards[pawnSquare.halfboard].pieces[pawnSquare.pseudoRank][
       pawnSquare.pseudoFile
     ] = { pieceType: to, player: pawn.player };
+    newBoard.pawnUpForPromotion = null;
+    return newBoard;
   }
 
   _normalizeIndex(index: SquareIndex, fromIndex: SquareIndex) {

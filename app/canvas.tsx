@@ -11,11 +11,12 @@ import Vector2D from "./vector";
 import getClickedSquare from "./get-clicked-square";
 import renderSelectedSquares from "./render-selected-squares";
 import SquareIndex from "./square-index";
-import renderPromotionMenu from "./render-promotion-menu";
+import renderPromotionMenu from "./promotion-menu";
+import PromotionMenu from "./promotion-menu";
 
 export default function BoardCanvas() {
   const SIZE = 1000;
-  const NUM_PLAYERS = 3;
+  const NUM_PLAYERS = 4;
   const [widthHeight, setWidthHeight] = useState<[number, number] | null>(null);
 
   const [drawAreaLeft, drawAreaTop] =
@@ -32,6 +33,13 @@ export default function BoardCanvas() {
   const [boardState, setBoardState] = useState<BoardState>(
     new BoardState(NUM_PLAYERS)
   );
+  const promotionMenu = boardState.pawnUpForPromotion
+    ? new PromotionMenu(
+        boardCoords,
+        boardState.pawnUpForPromotion,
+        boardState.getPiece(boardState.pawnUpForPromotion)!.player
+      )
+    : null;
   const [selectedSquare, setSelectedSquare] = useState<SquareIndex | null>(
     null
   );
@@ -75,9 +83,9 @@ export default function BoardCanvas() {
         )
       );
     }
+    promotionMenu?.renderPromotionMenu(ctx);
     if (boardState.pawnUpForPromotion) {
       console.log("Pawn up for promotion at", boardState.pawnUpForPromotion);
-      renderPromotionMenu(ctx, boardCoords, boardState.pawnUpForPromotion);
     }
     for (let i = 0; i < NUM_PLAYERS; i++) {
       console.log(
@@ -100,6 +108,7 @@ export default function BoardCanvas() {
     drawAreaLeft,
     drawAreaSize,
     drawAreaTop,
+    promotionMenu,
     selectedSquare,
     widthHeight,
   ]);
@@ -109,6 +118,13 @@ export default function BoardCanvas() {
       e.clientX - (drawAreaLeft ?? 0),
       e.clientY - (drawAreaTop ?? 0)
     ).divide(drawAreaSize ?? 1);
+    if (promotionMenu) {
+      const pieceType = promotionMenu.getClickedPieceType(point);
+      if (pieceType) {
+        setBoardState(boardState.promotePawn(pieceType));
+      }
+      return;
+    }
     const clickedSquare = getClickedSquare(point, boardCoords);
     if (clickedSquare !== null) {
       if (!selectedSquare) {

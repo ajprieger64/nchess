@@ -1,7 +1,6 @@
 import HalfboardState from "./halfboard-state";
+import { Quadrilateral } from "./quadrilateral";
 import Vector2D from "./vector";
-
-export type Quadrilateral = [Vector2D, Vector2D, Vector2D, Vector2D];
 
 export default class HalfboardCoords {
   static BOARD_CENTER = new Vector2D(0.5, 0.5);
@@ -138,7 +137,7 @@ export default class HalfboardCoords {
   // Transforms from a point on the unit square to the matching point within the quadrilateral with coordinates (topLeft, topRight, bottomRight, bottomLeft)
   static _bilinearInterpolation2D(
     start: Vector2D,
-    destination: [Vector2D, Vector2D, Vector2D, Vector2D]
+    destination: Quadrilateral
   ): Vector2D {
     return destination[0]
       .multiply((1 - start.x) * start.y)

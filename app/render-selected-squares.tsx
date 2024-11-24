@@ -1,4 +1,5 @@
 import BoardCoords from "./board-coords";
+import { fillQuad } from "./quadrilateral";
 import SquareIndex from "./square-index";
 
 export default function renderSelectedSquares(
@@ -10,13 +11,7 @@ export default function renderSelectedSquares(
   ctx.fillStyle = "rgb(0, 0, 255)";
   for (const selectedSquare of selectedSquares) {
     const squareCoords = boardCoords.getSquare(selectedSquare);
-    const squarePath = new Path2D();
-    squarePath.moveTo(squareCoords[0].x, squareCoords[0].y);
-    squarePath.lineTo(squareCoords[1].x, squareCoords[1].y);
-    squarePath.lineTo(squareCoords[2].x, squareCoords[2].y);
-    squarePath.lineTo(squareCoords[3].x, squareCoords[3].y);
-    squarePath.closePath();
-    ctx.fill(squarePath);
+    fillQuad(ctx, squareCoords);
   }
   ctx.globalAlpha = 1;
 }
